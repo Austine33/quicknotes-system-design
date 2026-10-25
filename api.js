@@ -44,7 +44,14 @@ function createNoteItem(note) {
   const body = document.createElement("p");
   body.textContent = note.body;
 
-  li.append(title, body);
+    const deleteBtn = document.createElement("button");
+  deleteBtn.textContent = "Delete";
+  deleteBtn.classList.add("delete-btn");
+  deleteBtn.addEventListener("click", function () {
+    deleteNote(note, li, deleteBtn);
+  });
+
+  li.append(title, body, deleteBtn);
   return li;
 }
 
@@ -132,3 +139,35 @@ async function createNote(event) {
 }
 
 noteForm.addEventListener("submit", createNote);
+
+// ===== DELETE: remove a note =====
+// IMPORTANT: JSONPlaceholder does not really save the notes we create.
+// A note we create gets the id 101, but the server does not know it, so
+// DELETE /posts/101 may answer "404 Not Found". Our approach: we still send
+// the DELETE request, but if a note we created ourselves (id above 100)
+// gets a 404, we treat it as success and remove it from the page, because
+// the note only ever existed on this page. Any other error is shown to the user.
+async function deleteNote(note, li, deleteBtn) {
+  showStatus("Deleting note...", "loading");
+  deleteBtn.disabled = true;
+
+  try {
+    await request(API_URL + "/" + note.id, { method: "DELETE" });
+    li.remove();
+    showStatus("Note deleted.", "success");
+  } catch (error) {
+    if (note.id > 100 && error.status === 404) {
+      li.remove();
+      showStatus("Note removed (it only existed on this page).", "success");
+    } else {
+      deleteBtn.disabled = false;
+      showStatus("Sorry, we could not delete that note. Please try again.", "error");
+      return;
+    }
+  }
+
+  // If the list is now empty, show the empty-state message
+  if (notesList.children.length === 0) {
+    showNotes([]);
+  }
+}
