@@ -1,0 +1,84 @@
+// ===== Settings =====
+const API_URL = "https://jsonplaceholder.typicode.com/posts";
+
+// ===== Find the elements on the page =====
+const loadBtn = document.querySelector("#load-btn");
+const statusText = document.querySelector("#status");
+const noteForm = document.querySelector("#note-form");
+const titleInput = document.querySelector("#title-input");
+const bodyInput = document.querySelector("#body-input");
+const submitBtn = document.querySelector("#submit-btn");
+const notesList = document.querySelector("#notes-list");
+
+// ===== Helpers =====
+
+// Show a message. type is "loading", "success" or "error"
+function showStatus(message, type) {
+  statusText.textContent = message;
+  statusText.className = type;
+}
+
+// One reusable function for every request
+async function request(url, options) {
+  const response = await fetch(url, options);
+
+  if (!response.ok) {
+    const error = new Error("Request failed with status " + response.status);
+    error.status = response.status;
+    throw error;
+  }
+
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : null;
+  return { data: data, status: response.status };
+}
+
+// Build one note card (textContent only, so user text is safe)
+function createNoteItem(note) {
+  const li = document.createElement("li");
+  li.classList.add("note-card");
+
+  const title = document.createElement("h3");
+  title.textContent = note.title;
+
+  const body = document.createElement("p");
+  body.textContent = note.body;
+
+  li.append(title, body);
+  return li;
+}
+
+// Draw a whole list of notes (or the empty state)
+function showNotes(notes) {
+  notesList.textContent = "";
+
+  if (notes.length === 0) {
+    const empty = document.createElement("li");
+    empty.classList.add("empty");
+    empty.textContent = "There are no notes to show.";
+    notesList.appendChild(empty);
+    return;
+  }
+
+  for (let i = 0; i < notes.length; i++) {
+    notesList.appendChild(createNoteItem(notes[i]));
+  }
+}
+
+// ===== GET: load notes =====
+async function loadNotes() {
+  showStatus("Loading notes...", "loading");
+  loadBtn.disabled = true;
+
+  try {
+    const result = await request(API_URL + "?_limit=10");
+    showNotes(result.data);
+    showStatus("Loaded " + result.data.length + " notes from the server.", "success");
+  } catch (error) {
+    showStatus("Sorry, we could not load your notes. Please try again.", "error");
+  } finally {
+    loadBtn.disabled = false;
+  }
+}
+
+loadBtn.addEventListener("click", loadNotes);
